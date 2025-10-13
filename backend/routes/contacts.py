@@ -1,6 +1,6 @@
 # backend/routes/contacts.py
 from flask import Blueprint, request, jsonify
-from database import mongo
+from ..database import mongo  # <-- relative import
 from bson import ObjectId
 
 contacts_bp = Blueprint("contacts", __name__)
@@ -63,4 +63,5 @@ def reply_to_contact(id):
     except Exception as e:
         print("Error replying to contact:", e)
         return jsonify({"error": str(e)}), 500
+
 
