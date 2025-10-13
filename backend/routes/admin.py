@@ -1,6 +1,6 @@
-# routes/admin.py
+# backend/routes/admin.py
 from flask import Blueprint, jsonify, request
-from database import mongo
+from ..database import mongo  # <-- relative import
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -25,7 +25,13 @@ def get_messages():
 # ✅ Delete a contact message
 @admin_bp.route("/messages/<id>", methods=["DELETE"])
 def delete_message(id):
-    result = mongo.db.contacts.delete_one({"_id": id})
-    if result.deleted_count:
-        return jsonify({"message": "Message deleted successfully"})
-    return jsonify({"error": "Message not found"}), 404
+    from bson import ObjectId
+    try:
+        result = mongo.db.contacts.delete_one({"_id": ObjectId(id)})
+        if result.deleted_count:
+            return jsonify({"message": "Message deleted successfully"})
+        return jsonify({"error": "Message not found"}), 404
+    except Exception as e:
+        print("Error deleting message:", e)
+        return jsonify({"error": str(e)}), 500
+
