@@ -1,8 +1,8 @@
-# routes/blog.py
+# backend/routes/blog.py
 from flask import Blueprint, request, jsonify, session
 from bson import ObjectId
 from bson.errors import InvalidId
-from database import mongo
+from ..database import mongo  # <-- relative import
 import datetime
 from functools import wraps
 
@@ -46,8 +46,6 @@ def get_single_blog(identifier):
 
         # If not found by slug, try ObjectId
         if not blog:
-            from bson import ObjectId
-            from bson.errors import InvalidId
             try:
                 blog = mongo.db.blogs.find_one({"_id": ObjectId(identifier)})
             except InvalidId:
@@ -80,10 +78,8 @@ def create_blog():
 
         # ---------- Slug Generation ----------
         import re
-        # Create a URL-friendly slug from the title
         slug_base = re.sub(r'[^a-zA-Z0-9]+', '-', data["title"].lower()).strip('-')
 
-        # Ensure uniqueness (append timestamp if the slug already exists)
         existing = mongo.db.blogs.find_one({"slug": slug_base})
         if existing:
             slug_base += f"-{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
