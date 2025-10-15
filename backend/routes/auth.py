@@ -1,52 +1,121 @@
 #backend/routes/auth.py
-# backend/routes/auth.py
-from flask import Blueprint, request, jsonify, session
-import os
-import logging
-from dotenv import load_dotenv
+from flask import Blueprint, request, jsonify
+from bson import ObjectId
+from bson.errors import InvalidId
+from ..database import mongo
+import datetime
+import re
 
-# -------------------- LOAD ENV --------------------
-load_dotenv()
+blog_bp = Blueprint("blog", __name__)
 
-auth_bp = Blueprint("auth", __name__)
+# ---------- Get All Blogs ----------
+@blog_bp.route("/", methods=["GET", "OPTIONS"])
+def get_blogs():
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
 
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-
-logging.basicConfig(level=logging.INFO)
-logging.info(f"Admin email loaded: {ADMIN_EMAIL}")
-
-# -------------------- ROUTES --------------------
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    data = request.get_json()
-
-    if not data:
-        return jsonify({"error": "Missing JSON body"}), 400
-
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
-
-    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-        session["admin_logged_in"] = True
-        return jsonify({"message": "Login successful"}), 200
-
-    return jsonify({"error": "Invalid credentials"}), 401
+    try:
+        blogs = list(mongo.db.blogs.find().sort("_id", -1))
+        for b in blogs:
+            b["_id"] = str(b["_id"])
+        return jsonify(blogs), 200
+    except Exception as e:
+        print("❌ Error fetching blogs:", e)
+        return jsonify({"error": str(e)}), 500
 
 
-@auth_bp.route("/logout", methods=["POST"])
-def logout():
-    session.pop("admin_logged_in", None)
-    return jsonify({"message": "Logged out successfully"}), 200
+# ---------- Get Single Blog ----------
+@blog_bp.route("/<identifier>", methods=["GET", "OPTIONS"])
+def get_single_blog(identifier):
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+
+    try:
+        # Try slug first
+        blog = mongo.db.blogs.find_one({"slug": identifier})
+        if not blog:
+            try:
+                blog = mongo.db.blogs.find_one({"_id": ObjectId(identifier)})
+            except InvalidId:
+                pass
+
+        if not blog:
+            return jsonify({"error": "Blog not found"}), 404
+
+        blog["_id"] = str(blog["_id"])
+        return jsonify(blog), 200
+
+    except Exception as e:
+        print("❌ Error fetching blog:", e)
+        return jsonify({"error": str(e)}), 500
 
 
-@auth_bp.route("/verify", methods=["GET"])
-def verify_login():
-    if session.get("admin_logged_in"):
-        return jsonify({"authenticated": True}), 200
-    else:
-        return jsonify({"authenticated": False}), 200  # ✅ don't use 401
+# ---------- Create Blog ----------
+@blog_bp.route("/", methods=["POST", "OPTIONS"])
+def create_blog():
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
 
+    try:
+        data = request.json
+        if not data.get("title") or not data.get("content"):
+            return jsonify({"error": "Title and content are required"}), 400
+
+        # Generate slug
+        slug_base = re.sub(r'[^a-zA-Z0-9]+', '-', data["title"].lower()).strip('-')
+        existing = mongo.db.blogs.find_one({"slug": slug_base})
+        if existing:
+            slug_base += f"-{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+
+        data["slug"] = slug_base
+        data["created_at"] = datetime.datetime.utcnow()
+        data["updated_at"] = datetime.datetime.utcnow()
+
+        result = mongo.db.blogs.insert_one(data)
+        data["_id"] = str(result.inserted_id)
+        return jsonify(data), 201
+
+    except Exception as e:
+        print("❌ Error creating blog:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------- Update Blog ----------
+@blog_bp.route("/<id>", methods=["PUT", "OPTIONS"])
+def update_blog(id):
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+
+    try:
+        data = request.json
+        data["updated_at"] = datetime.datetime.utcnow()
+
+        result = mongo.db.blogs.update_one({"_id": ObjectId(id)}, {"$set": data})
+        if result.matched_count:
+            return jsonify({"message": "Blog updated successfully"}), 200
+        return jsonify({"error": "Blog not found"}), 404
+
+    except InvalidId:
+        return jsonify({"error": "Invalid blog ID"}), 400
+    except Exception as e:
+        print("❌ Error updating blog:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------- Delete Blog ----------
+@blog_bp.route("/<id>", methods=["DELETE", "OPTIONS"])
+def delete_blog(id):
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+
+    try:
+        result = mongo.db.blogs.delete_one({"_id": ObjectId(id)})
+        if result.deleted_count:
+            return jsonify({"message": "Blog deleted successfully"}), 200
+        return jsonify({"error": "Blog not found"}), 404
+
+    except InvalidId:
+        return jsonify({"error": "Invalid blog ID"}), 400
+    except Exception as e:
+        print("❌ Error deleting blog:", e)
+        return jsonify({"error": str(e)}), 500
