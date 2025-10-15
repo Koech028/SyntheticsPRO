@@ -45,7 +45,8 @@ def logout():
 
 @auth_bp.route("/verify", methods=["GET"])
 def verify_login():
-    """✅ Check if admin is logged in"""
     if session.get("admin_logged_in"):
         return jsonify({"authenticated": True}), 200
-    return jsonify({"authenticated": False}), 401
+    else:
+        return jsonify({"authenticated": False}), 200  # ✅ don't use 401
+
