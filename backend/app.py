@@ -15,7 +15,7 @@ app = Flask(__name__)
 # -------------------- SECURITY CONFIG --------------------
 app.secret_key = os.getenv("SECRET_KEY", "fallback_secret_key")
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
-app.config["SESSION_COOKIE_SECURE"] = False  # set True if using HTTPS (Render)
+app.config["SESSION_COOKIE_SECURE"] = True 
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
 
 # -------------------- CORS --------------------
