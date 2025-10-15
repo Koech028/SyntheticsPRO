@@ -1,11 +1,12 @@
 #backend/routes/auth.py
+# backend/routes/auth.py
 from flask import Blueprint, request, jsonify, session
 import os
 import logging
-from dotenv import load_dotenv  # ✅ Add this
+from dotenv import load_dotenv
 
 # -------------------- LOAD ENV --------------------
-load_dotenv()  # ✅ Must come before using os.getenv()
+load_dotenv()
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -29,12 +30,9 @@ def login():
     if not email or not password:
         return jsonify({"error": "Email and password required"}), 400
 
-    # Debug logging
-    logging.info(f"Login attempt: email={email}, expected={ADMIN_EMAIL}")
-
     if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
         session["admin_logged_in"] = True
-        return jsonify({"message": "Login successful"})
+        return jsonify({"message": "Login successful"}), 200
 
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -42,12 +40,12 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     session.pop("admin_logged_in", None)
-    return jsonify({"message": "Logged out successfully"})
+    return jsonify({"message": "Logged out successfully"}), 200
 
 
 @auth_bp.route("/verify", methods=["GET"])
 def verify_login():
-    """Check if the admin is still logged in"""
+    """✅ Check if admin is logged in"""
     if session.get("admin_logged_in"):
-        return jsonify({"authenticated": True})
+        return jsonify({"authenticated": True}), 200
     return jsonify({"authenticated": False}), 401
