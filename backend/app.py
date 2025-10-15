@@ -13,8 +13,10 @@ app = Flask(__name__)
 
 # -------------------- SECURITY CONFIG --------------------
 app.secret_key = os.getenv("SECRET_KEY", "fallback_secret_key")
+app.config["SESSION_COOKIE_NAME"] = "session"
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
-app.config["SESSION_COOKIE_SECURE"] = True 
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_DOMAIN"] = ".onrender.com"  # ✅ KEY FIX
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
 
 # -------------------- CORS --------------------
