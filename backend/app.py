@@ -1,4 +1,3 @@
-#backend/app.py
 # backend/app.py
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -27,6 +26,7 @@ CORS(
         "http://localhost:5173",
         "http://127.0.0.1:8080",
         "https://clients.savannadesignsagency.com",
+        "https://syntheticspro.vercel.app"
     ]
 )
 
