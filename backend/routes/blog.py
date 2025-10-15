@@ -80,7 +80,7 @@ def create_blog():
         return jsonify({"error": str(e)}), 500
 
 
-# ---------- Update Blog ----------
+# ---------- Update Blog -------
 @blog_bp.route("/<id>", methods=["PUT", "OPTIONS"])
 def update_blog(id):
     if request.method == "OPTIONS":
@@ -88,9 +88,23 @@ def update_blog(id):
 
     try:
         data = request.json
+
+        # ✅ Remove _id if sent by frontend (MongoDB cannot update _id)
+        if "_id" in data:
+            del data["_id"]
+
+        # ✅ Optional: also regenerate slug if title changed
+        if "title" in data:
+            slug_base = re.sub(r'[^a-zA-Z0-9]+', '-', data["title"].lower()).strip('-')
+            data["slug"] = slug_base
+
         data["updated_at"] = datetime.datetime.utcnow()
 
-        result = mongo.db.blogs.update_one({"_id": ObjectId(id)}, {"$set": data})
+        result = mongo.db.blogs.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": data}
+        )
+
         if result.matched_count:
             return jsonify({"message": "Blog updated successfully"}), 200
         return jsonify({"error": "Blog not found"}), 404
@@ -100,6 +114,7 @@ def update_blog(id):
     except Exception as e:
         print("❌ Error updating blog:", e)
         return jsonify({"error": str(e)}), 500
+
 
 
 # ---------- Delete Blog ----------
