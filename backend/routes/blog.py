@@ -57,7 +57,7 @@ def create_blog():
         return jsonify({"message": "OK"}), 200
 
     try:
-        data = request.json
+        data = request.get_json(force=True)
         if not data.get("title") or not data.get("content"):
             return jsonify({"error": "Title and content are required"}), 400
 
@@ -80,41 +80,56 @@ def create_blog():
         return jsonify({"error": str(e)}), 500
 
 
-# ---------- Update Blog -------
+# ---------- Update Blog ----------
 @blog_bp.route("/<id>", methods=["PUT", "OPTIONS"])
 def update_blog(id):
     if request.method == "OPTIONS":
         return jsonify({"message": "OK"}), 200
 
     try:
-        data = request.json
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
 
-        # ✅ Remove _id if sent by frontend (MongoDB cannot update _id)
+        # ✅ Clean _id from payload
         if "_id" in data:
             del data["_id"]
 
-        # ✅ Optional: also regenerate slug if title changed
-        if "title" in data:
-            slug_base = re.sub(r'[^a-zA-Z0-9]+', '-', data["title"].lower()).strip('-')
+        # ✅ Ensure both title & content remain
+        existing = mongo.db.blogs.find_one({"_id": ObjectId(id)})
+        if not existing:
+            return jsonify({"error": "Blog not found"}), 404
+
+        title = data.get("title", existing.get("title"))
+        content = data.get("content", existing.get("content"))
+
+        # ✅ Prevent accidental overwriting with empty fields
+        if not title or not content:
+            return jsonify({"error": "Title and content cannot be empty"}), 400
+
+        # ✅ Regenerate slug ONLY if title actually changed
+        if title != existing.get("title"):
+            slug_base = re.sub(r'[^a-zA-Z0-9]+', '-', title.lower()).strip('-')
+            existing_slug = mongo.db.blogs.find_one({"slug": slug_base})
+            if existing_slug and str(existing_slug["_id"]) != id:
+                slug_base += f"-{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
             data["slug"] = slug_base
 
         data["updated_at"] = datetime.datetime.utcnow()
+        data["title"] = title
+        data["content"] = content
 
-        result = mongo.db.blogs.update_one(
-            {"_id": ObjectId(id)},
-            {"$set": data}
-        )
+        mongo.db.blogs.update_one({"_id": ObjectId(id)}, {"$set": data})
 
-        if result.matched_count:
-            return jsonify({"message": "Blog updated successfully"}), 200
-        return jsonify({"error": "Blog not found"}), 404
+        updated = mongo.db.blogs.find_one({"_id": ObjectId(id)})
+        updated["_id"] = str(updated["_id"])
+        return jsonify(updated), 200
 
     except InvalidId:
         return jsonify({"error": "Invalid blog ID"}), 400
     except Exception as e:
         print("❌ Error updating blog:", e)
         return jsonify({"error": str(e)}), 500
-
 
 
 # ---------- Delete Blog ----------
@@ -134,4 +149,3 @@ def delete_blog(id):
     except Exception as e:
         print("❌ Error deleting blog:", e)
         return jsonify({"error": str(e)}), 500
-
