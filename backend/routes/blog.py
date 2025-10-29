@@ -79,6 +79,33 @@ def create_blog():
         print("❌ Error creating blog:", e)
         return jsonify({"error": str(e)}), 500
 
+# Add this to your blog.py or create a new uploads.py
+
+@blog_bp.route("/upload-image", methods=["POST"])
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file"}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file and allowed_file(file.filename):
+        # Save file to your storage (local, S3, etc.)
+        filename = secure_filename(file.filename)
+        # For now, save locally - in production use cloud storage
+        file.save(os.path.join('uploads', filename))
+        
+        # Return the URL where the image can be accessed
+        image_url = f"/uploads/{filename}"
+        return jsonify({"url": image_url}), 200
+    
+    return jsonify({"error": "Invalid file type"}), 400
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
+
 
 # ---------- Update Blog ----------
 @blog_bp.route("/<id>", methods=["PUT", "OPTIONS"])
