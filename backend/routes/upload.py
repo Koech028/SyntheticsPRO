@@ -22,9 +22,16 @@ def upload_image():
         return jsonify({"error": "Invalid file type"}), 400
 
     try:
+        # Save the image to MongoDB GridFS
         file_id = fs.put(file.read(), filename=file.filename, content_type=file.mimetype)
-        image_url = f"/api/upload/{file_id}"
+
+        # Build a full absolute URL (works in Render and local dev)
+        base_url = request.host_url.rstrip("/")
+        image_url = f"{base_url}/api/upload/{file_id}"
+
+        print(f"✅ Image uploaded successfully: {file.filename} -> {image_url}")
         return jsonify({"url": image_url}), 201
+
     except Exception as e:
         print("❌ Upload error:", e)
         return jsonify({"error": str(e)}), 500
@@ -38,3 +45,5 @@ def get_image(file_id):
     except Exception as e:
         print("❌ Image fetch error:", e)
         return jsonify({"error": "Image not found"}), 404
+
+
