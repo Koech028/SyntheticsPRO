@@ -6,7 +6,7 @@ import certifi, ssl, os
 mongo = PyMongo()
 
 def init_mongo(app):
-    """Initialize MongoDB with TLS 1.2 (compatible with new PyMongo)."""
+    """Initialize MongoDB with TLS 1.2 (Atlas-ready) and expose PyMongo + client for GridFS."""
     uri = os.getenv("MONGO_URI")
     try:
         # Force TLS 1.2 handshake
@@ -15,7 +15,7 @@ def init_mongo(app):
         ctx.verify_mode = ssl.CERT_REQUIRED
         ctx.load_verify_locations(certifi.where())
 
-        # ✅ The new pymongo expects tls=True, tlsCAFile, and ssl options — NOT ssl_context
+        # Create verified MongoDB client
         client = MongoClient(
             uri,
             tls=True,
@@ -25,18 +25,26 @@ def init_mongo(app):
             ssl=True,
         )
 
-        # Verify connectivity
+        # Verify connection
         client.admin.command("ping")
         print("✅ Connected to MongoDB Atlas (TLS 1.2 verified)")
 
-        # Pass verified connection to Flask
+        # Initialize PyMongo for Flask context
         app.config["MONGO_URI"] = uri
         mongo.init_app(app)
+
+        # Attach the raw client and DB reference for GridFS (optional but handy)
+        mongo.client = client
+        mongo.db = client.get_default_database()
+
         return mongo
+
     except Exception as e:
         print(f"❌ MongoDB TLS connection failed: {e}")
         raise e
 
+
 def get_db():
+    """Return active database instance."""
     return mongo.db
 
