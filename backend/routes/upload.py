@@ -8,8 +8,7 @@ from ..database import mongo
 upload_bp = Blueprint("upload", __name__)
 fs = GridFS(mongo.db)
 
-# ---------- Upload Image ----------
-@upload_bp.route("/upload", methods=["POST", "OPTIONS"])
+@upload_bp.route("/", methods=["POST", "OPTIONS"])
 def upload_image():
     if request.method == "OPTIONS":
         return jsonify({"message": "OK"}), 200
@@ -19,26 +18,19 @@ def upload_image():
 
     file = request.files["image"]
 
-    # Only accept images
     if not file.mimetype.startswith("image/"):
         return jsonify({"error": "Invalid file type"}), 400
 
     try:
-        # Store image in MongoDB GridFS
         file_id = fs.put(file.read(), filename=file.filename, content_type=file.mimetype)
-
-        # Generate URL (accessible route)
         image_url = f"/api/upload/{file_id}"
-
         return jsonify({"url": image_url}), 201
-
     except Exception as e:
         print("❌ Upload error:", e)
         return jsonify({"error": str(e)}), 500
 
 
-# ---------- Serve Stored Image ----------
-@upload_bp.route("/upload/<file_id>", methods=["GET"])
+@upload_bp.route("/<file_id>", methods=["GET"])
 def get_image(file_id):
     try:
         gridout = fs.get(ObjectId(file_id))
