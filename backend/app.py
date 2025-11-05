@@ -20,20 +20,23 @@ app.config["SESSION_COOKIE_DOMAIN"] = ".onrender.com"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
 
 # -------------------- CORS --------------------
+from flask_cors import CORS
+
 CORS(
     app,
     supports_credentials=True,
     origins=[
-        "http://localhost:8080",
-        "http://localhost:5173",
+        "http://localhost:8080",            # dev preview
+        "http://localhost:5173",            # vite dev default
         "http://127.0.0.1:8080",
         "https://syntheticindicesreview.com",
         "https://syntheticspro.vercel.app",
-        "https://syntheticspro-haw3.onrender.com"  # add your actual public API domain(s)
+        "https://syntheticspro-haw3.onrender.com"  # your Render backend public domain
     ],
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],   # <-- include PUT & DELETE
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 )
+
 
 # -------------------- DATABASE --------------------
 from .database import init_mongo
