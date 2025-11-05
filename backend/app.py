@@ -28,8 +28,11 @@ CORS(
         "http://localhost:5173",
         "http://127.0.0.1:8080",
         "https://syntheticindicesreview.com",
-        "https://syntheticspro.vercel.app"
-    ]
+        "https://syntheticspro.vercel.app",
+        "https://syntheticspro-haw3.onrender.com"  # add your actual public API domain(s)
+    ],
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # -------------------- DATABASE --------------------
