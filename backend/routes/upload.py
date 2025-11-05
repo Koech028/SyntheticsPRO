@@ -8,6 +8,7 @@ from ..database import mongo
 upload_bp = Blueprint("upload", __name__)
 fs = GridFS(mongo.db)
 
+
 @upload_bp.route("/", methods=["POST", "OPTIONS"])
 def upload_image():
     if request.method == "OPTIONS":
@@ -25,10 +26,11 @@ def upload_image():
         # Save the image to MongoDB GridFS
         file_id = fs.put(file.read(), filename=file.filename, content_type=file.mimetype)
 
-        # Build a full absolute URL (works in Render and local dev)
+        # ✅ Return a relative URL so frontend builds the full one
         image_url = f"/api/upload/{file_id}"
-      print(f"✅ Image uploaded successfully: {file.filename} -> {image_url}")
-       return jsonify({"url": image_url}), 201
+
+        print(f"✅ Image uploaded successfully: {file.filename} -> {image_url}")
+        return jsonify({"url": image_url}), 201
 
     except Exception as e:
         print("❌ Upload error:", e)
@@ -43,6 +45,8 @@ def get_image(file_id):
     except Exception as e:
         print("❌ Image fetch error:", e)
         return jsonify({"error": "Image not found"}), 404
+
+
 
 
 
